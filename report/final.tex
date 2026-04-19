@@ -1,0 +1,93 @@
+\documentclass[12pt]{article}
+\usepackage{graphicx}
+\usepackage{url}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{enumitem}
+\usepackage{caption}
+
+% Page and typography setup
+\usepackage[legalpaper, margin=2cm]{geometry}
+
+% Math and units
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{siunitx}
+\sisetup{separate-uncertainty=true}
+
+% Figures, tables, and captions
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage[font=small,labelfont=bf]{caption}
+
+% Hyperlinks and clever references
+\usepackage[hidelinks]{hyperref}
+\usepackage{cleveref}
+\usepackage{setspace}
+
+
+% Title
+\title{Classification and Segmentation of }
+\author{
+    \textbf{Mahdi Shakouri} \\[0.4em]
+    University of British Columbia \\[0.6em]
+    PHYS 310 - Machine Learning in Physics and Astronomy
+}
+\date{April 14th, 2026}
+
+\begin{document}
+\maketitle
+
+\section*{Abstract}
+
+
+\begin{figure}[!h]
+    \centering
+    % \includegraphics[width=0.6\textwidth]{C:/MohammadMahdi/University/Fifth Yr/PHYS 410/MP1/imgs/antennae.jpeg}
+    \caption*{The Antennae Galaxies are a pair of interacting galaxies with
+    dramatic tidal tails formed by their gravitational interaction. 
+    Credit: NASA, ESA, and the Hubble Heritage Team (STScI/AURA).}
+\end{figure}
+
+\clearpage
+\setcounter{tocdepth}{3}
+\tableofcontents
+\clearpage
+
+
+\section{Introduction}
+
+
+\section{Methods}
+
+
+
+\subsection{Database Description}
+The original DDSM (Digital Database for Screening Mammography) dataset on the Cancer Imaging Archives (CIA) created contains thousands of "normal" cases with no tumors and no masks. However, the CBIS-DDSM (Curated Breast Imaging Subset of DDSM) is a modernized, cleaned-up subset of that original database.
+
+The dataset is organized into two main categories: "calc" for calcifications and "mass" for masses. 
+Every single row in the mass and calc CSV files represents a confirmed abnormality, and every single one of those rows includes:
+
+
+\subsection{Preprocessing}
+
+\section{Discussion}
+
+
+\section{Conclusion and Summary}
+
+\section{Results}
+
+
+\clearpage
+% References section (thebibliography prints the "References" heading)
+\begin{thebibliography}{9}
+
+\bibitem{ref:example1}
+Choptuik, M. (2025). Physics 210: Intro Computational Physics: Course Notes and Resources [Website].
+Retrieved from \href{https://laplace.physics.ubc.ca/410/}{https://laplace.physics.ubc.ca/410/}
+
+\bibitem{ref:example2}
+Toomre, A., and Toomre, J. (1972). Galactic Bridges and Tails. The Astrophysical Journal, 178(3), 623666.
+
+\end{thebibliography}
+
+\end{document}
