@@ -7,3 +7,4 @@ torchvision
 tqdm
 scikit-learn
 keras
+tensorflow
