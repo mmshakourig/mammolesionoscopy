@@ -61,13 +61,17 @@
 
 
 \subsection{Database Description}
-The original DDSM (Digital Database for Screening Mammography) dataset on the Cancer Imaging Archives (CIA) created contains thousands of "normal" cases with no tumors and no masks. However, the CBIS-DDSM (Curated Breast Imaging Subset of DDSM) is a modernized, cleaned-up subset of that original database.
+The original DDSM (Digital Database for Screening Mammography) dataset on the Cancer Imaging Archives (CIA) created contains thousands of "normal" cases with no tumors and no masks. The CBIS-DDSM (Curated Breast Imaging Subset of DDSM) is a modernized, cleaned-up subset of that original database. 
 
-The dataset is organized into two main categories: "calc" for calcifications and "mass" for masses. 
-Every single row in the mass and calc CSV files represents a confirmed abnormality, and every single one of those rows includes:
+The CBIS-DDSM dataset itself contains
 
+Image data for this collection is structured such that each participant has multiple patient IDs. For example, participant 00038 has 10 separate patient IDs which provide information about the scans within the IDs. The dataset is organized into two main categories for calcification and masse abnormalites in respective CSV files. However each patient ID can have multiple abnormalities of either type, and some patient IDs may have abnormalities of both types. Each abnormality is associated with a mask that indicates the location of the tumor in the entire scan of varying pixel dimensions, and a ROI (Region of Interest) cropped scan that is a smaller image surrounding the tumor, also of varying pixel dimensions.
+
+As such, preprocessing of the dataset is required to standardize the input data for the machine learning model. This includes resizing the images to a consistent dimension, normalizing pixel values, and potentially augmenting the data to increase the diversity of training samples. Additionally, the dataset needs to be split into training, validation, and test sets to evaluate the performance of the model effectively.
 
 \subsection{Preprocessing}
+
+
 
 \section{Discussion}
 
