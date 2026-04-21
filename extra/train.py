@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from datasethelpers import BreastCancerDataset, get_transforms
-from model import BreastCancerClassifier
+from Final.extra.model import BreastCancerClassifier
 
 def train(args):
     # Device
