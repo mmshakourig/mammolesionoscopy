@@ -27,10 +27,10 @@ class MammographyDataset(Dataset):
     train_transforms = A.Compose([
         A.HorizontalFlip(p=0.5),
         A.VerticalFlip(p=0.3),
-        A.Rotate(limit=20, p=0.5),
+        # A.Rotate(limit=20, p=0.5),
         A.RandomBrightnessContrast(brightness_limit=0.3, contrast_limit=0.3, p=0.5),
-        A.ElasticTransform(alpha=1, sigma=50, p=0.3),
-        A.GridDistortion(p=0.3),
+        # A.ElasticTransform(alpha=1, sigma=50, p=0.3),
+        # A.GridDistortion(p=0.3),
         A.Normalize(mean=(0.485,), std=(0.229,)),
         ToTensorV2(),
     ])
