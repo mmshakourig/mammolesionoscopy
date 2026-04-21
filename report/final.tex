@@ -19,35 +19,38 @@
 \usepackage[font=small,labelfont=bf]{caption}
 
 % Hyperlinks and clever references
-\usepackage[hidelinks]{hyperref}
+\usepackage[colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue]{hyperref}
 \usepackage{cleveref}
 \usepackage{setspace}
 
 
 % Title
-\title{Classification and Segmentation of }
+\title{Classification of Breast Cancer Abnormalities in Mammograms using Convolutional Neural Networks}
 \author{
-    \textbf{Mahdi Shakouri} \\[0.4em]
+    \textbf{Mahdi Shakouri} \\[0.6em]
+    PHYS 310 - Machine Learning in Physics and Astronomy \\[0.4em]
+    Deptartment of Physics and Astronomy \\[0.1em]
     University of British Columbia \\[0.6em]
-    PHYS 310 - Machine Learning in Physics and Astronomy
 }
 \date{April 14th, 2026}
 
 \begin{document}
 \maketitle
 
-\section*{Abstract}
+% \section*{Abstract}
 
 
-\begin{figure}[!h]
-    \centering
-    % \includegraphics[width=0.6\textwidth]{C:/MohammadMahdi/University/Fifth Yr/PHYS 410/MP1/imgs/antennae.jpeg}
-    \caption*{The Antennae Galaxies are a pair of interacting galaxies with
-    dramatic tidal tails formed by their gravitational interaction. 
-    Credit: NASA, ESA, and the Hubble Heritage Team (STScI/AURA).}
-\end{figure}
+% \begin{figure}[!h]
+%     \centering
+%     % \includegraphics[width=0.6\textwidth]{C:/MohammadMahdi/University/Fifth Yr/PHYS 410/MP1/imgs/antennae.jpeg}
+%     \caption*{The Antennae Galaxies are a pair of interacting galaxies with
+%     dramatic tidal tails formed by their gravitational interaction. 
+%     Credit: NASA, ESA, and the Hubble Heritage Team (STScI/AURA).}
+% \end{figure}
 
-\clearpage
+\vspace{.16\textwidth}
+
+
 \setcounter{tocdepth}{3}
 \tableofcontents
 \clearpage
@@ -55,43 +58,407 @@
 
 \section{Introduction}
 
+Breast cancer remains one of the leading causes of cancer-related mortality among women in Canada, and early detection is a central factor in improving patient outcomes \cite{ref:example5}. Although mortality has declined substantially over recent decades, radiology workflows remain constrained by the growing volume of screening and diagnostic imaging \cite{ref:example5}. In practice, radiologists review two-dimensional mammograms acquired from multiple views and assess suspicious regions such as masses and micro-calcifications before downstream treatment decisions can be made. This creates a clinically important bottleneck: delays in expert review can delay triage and treatment initiation, especially for patients with potentially malignant lesions \cite{ref:bleicher2016}.
+
+\medskip \noindent
+This project seeks to determine whether a relatively simple neural-network pipeline, trained on curated mammography data, reliably identify malignant abnormalities and support faster prioritization of high-risk cases. Beyond binary malignancy classification, we also consider whether the same framework can provide clinically useful secondary outputs, including abnormality type (mass versus calcification) and BI-RADS-informed risk stratification. Because BI-RADS categories are designed to communicate the probability of malignancy and recommended follow-up actions, they provide a natural target for machine-learning-assisted prioritization in a real clinical queue \cite{ref:example4}.
+
+\medskip \noindent
+To address this question, we use the CBIS-DDSM dataset, a curated subset of the DDSM archive released through The Cancer Imaging Archive \cite{ref:example1}. The dataset includes mammography images, lesion annotations, pathology labels, and associated metadata that support both classification and lesion-focused preprocessing. CBIS-DDSM was selected because it is a widely used benchmark for breast-cancer imaging studies, enabling direct comparison with prior literature, including the shallow-CNN and transfer-learning baselines reported by Das et al. \cite{ref:example2}.
+
+\medskip \noindent
+The goals of this study are threefold. First, construct a reproducible preprocessing pipeline that converts heterogeneous raw files into standardized model-ready inputs. Second, train and evaluate a neural-network classifier for malignant-versus-benign prediction and compare its performance with published benchmarks. Third, explore extended prediction tasks relevant to clinical triage, specifically lesion-type identification and BI-RADS-related scoring, to assess whether the model can provide richer decision support than a binary label alone.
+
+
+
 
 \section{Methods}
 
+\subsection{Dataset}
+The original DDSM (Digital Database for Screening Mammography) dataset on the Cancer Imaging Archives (CIA) created contains thousands of "normal" cases with no tumors and no masks. The CBIS-DDSM (Curated Breast Imaging Subset of DDSM) is a modernized, cleaned-up subset of that original database currated by Lee et al. \cite{ref:example1} 
 
-
-\subsection{Database Description}
-The original DDSM (Digital Database for Screening Mammography) dataset on the Cancer Imaging Archives (CIA) created contains thousands of "normal" cases with no tumors and no masks. The CBIS-DDSM (Curated Breast Imaging Subset of DDSM) is a modernized, cleaned-up subset of that original database. 
-
-The CBIS-DDSM dataset itself contains
-
-Image data for this collection is structured such that each participant has multiple patient IDs. For example, participant 00038 has 10 separate patient IDs which provide information about the scans within the IDs. The dataset is organized into two main categories for calcification and masse abnormalites in respective CSV files. However each patient ID can have multiple abnormalities of either type, and some patient IDs may have abnormalities of both types. Each abnormality is associated with a mask that indicates the location of the tumor in the entire scan of varying pixel dimensions, and a ROI (Region of Interest) cropped scan that is a smaller image surrounding the tumor, also of varying pixel dimensions.
-
-As such, preprocessing of the dataset is required to standardize the input data for the machine learning model. This includes resizing the images to a consistent dimension, normalizing pixel values, and potentially augmenting the data to increase the diversity of training samples. Additionally, the dataset needs to be split into training, validation, and test sets to evaluate the performance of the model effectively.
+\medskip
+\noindent
+Labelled data for this collection is structured as a ROI (Region of Interest) image that shows an identified abnormaly. A patient's entire mammogram does not have a unique label and as such each participant has multiple patient IDs multiple abnormalities of either of the two categories for calcification and mass abnormalites or both, store in their respective CSV files \cite{ref:example1}.
 
 \subsection{Preprocessing}
+
+The preprocessing pipeline was designed to convert the raw CBIS-DDSM metadata and image files into a consistent training table for both classification and mask-aware learning. First, the dataset builder combines the mass and calcification case-description CSV files with the DICOM metadata file and matches each sample using a composite key built from the abnormality type, patient ID, breast side, image view, and abnormality ID. This step links the cropped ROI image, the full mammogram, and the corresponding ROI mask whenever they are available.
+
+\medskip
+\noindent
+To standardize the input data for the machine learning models. Every sample was loaded and resized to a fixed resolution of $224\times224$ pixels customary to many Shallow CNNs and ResNet architectures \cite{ref:example3}. ROI images are read in grayscale.
+
+\medskip
+\noindent
+Images were normalized using the ImageNet-style statistics $(\mu=0.485,\, \sigma=0.229)$, following standard ImageNet-pretrained computer-vision pipeline \cite{ref:example3}. An active augmentation pipeline applies horizontal flips $(p=0.5)$, vertical flips $(p=0.3)$, and random brightness/contrast perturbations $(p=0.5)$. Rotations, elastic deformations, and grid distortions were tested in development but were disabled in the final transform configuration. These augmentations improve robustness to orientation and intensity variation while preserving the alignment between each mammogram crop and its mask. The final output of preprocessing is therefore a structured master dataset containing the abnormality image, it's mask, pathology label, BI-RADS score, and abnormality type for each sample as shown in Figure \ref{fig:samplese}.
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=0.8\textwidth]{../figs/samples.png}
+    \caption{Sample images from the preprocessed CBIS-DDSM dataset.}
+    \label{fig:samplese}
+\end{figure}
+
+\medskip
+\noindent
+Missing annotations were also handled explicitly. Cases without a valid mask or ROI were filtered out. The final dataset was compesd of 3252 abnormalities with the following distributions.
+
+
+\subsection{Data Distributions}
+
+After the filtering process described, the distribution of the pathological cases in the CBIS-DDSM dataset is shown in the Figure \ref{fig:dists} below, illustrating the prevalence of different types of abnormalitiess. 
+
+\begin{figure}[!htbp]
+    \centering
+    \begin{minipage}[t]{0.3\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../figs/dist1.png}
+        \caption*{(a) pathological cases}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.3\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../figs/dist2.png}
+        \caption*{(b) abnormality types}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.3\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../figs/dist3.png}
+        \caption*{(c) BI-RADS scores}
+    \end{minipage}
+    \caption{Data distributions in the CBIS-DDSM dataset}
+    \label{fig:dists}
+\end{figure}
+
+The distribution among calcification and mass abnormalities is relatively balanced, with a slight predominance of masses as seen in Figure \ref{fig:pat}. This distribution highlights the importance of addressing class imbalance in the dataset, as there are only a third of benign cases without recall compared to the malignant cases, and much less for mass abnormalities. To address this, we have grouped benign cases together, as is the common practice in the literature and done by \cite{ref:example2}.
+
+
+\begin{figure}[!htbp]
+    \centering
+    \begin{minipage}[t]{0.40\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../figs/abnormality.png}
+        \caption*{(a) Distribution of abnormality types}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.42\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../figs/pathdist.png}
+        \caption*{(b) Distribution of pathological cases}
+    \end{minipage}
+    \caption{Distribution of pathological cases and abnormality types in the CBIS-DDSM dataset}
+    \label{fig:pat}
+
+\end{figure}
+
+\subsection{Pathology Classification}
+The primary classification task is to predict the pathological status of each abnormality, which is a binary classification problem. Considering the baseline performance reported by Das et al. \cite{ref:example2} for a two-layer ShallowCNN, we implemented a similar architecture and trained it on the preprocessed dataset first. We also implemented a three-layer ShallowCNN with dropout to evaluate whether a slightly deeper architecture with regularization could improve performance.
+
+\medskip \noindent
+After a stratified 5-fold cross-validation was performed with the initial model, the dataset was split into training, validation, and test sets using an 80-10-10 split. The training set was used to fit the model parameters, while the validation set was used for hyperparameter tuning and early stopping. The test set was reserved for final performance evaluation. 
+
+\subsubsection{Two-Layer ShallowCNN}
+
+The model architecture for the two-layer ShallowCNN was a Keras Sequential model with the following layers:
+
+\begin{table}[!htbp]
+    \centering
+    \begin{tabular}{lcc}
+        \toprule
+        Layer & Output shape & Parameters \\
+        \midrule
+        conv2d (Conv2D) & (None, 224, 224, 16) & 160 \\
+        max\_pooling2d (MaxPooling2D) & (None, 112, 112, 16) & 0 \\
+        conv2d (Conv2D) & (None, 112, 112, 32) & 4,640 \\
+        max\_pooling2d (MaxPooling2D) & (None, 56, 56, 32) & 0 \\
+        flatten\ (Flatten) & (None, 25088) & 0 \\
+        dense\ (Dense) & (None, 64) & 1,605,696 \\
+        dense\ (Dense) & (None, 1) & 65 \\
+        \bottomrule
+    \end{tabular}
+    \caption{Layer-wise architecture summary of the two-layer ShallowCNN model.}
+    \label{tab:twolayercnn}
+\end{table}
+
+\noindent
+The activation function used for the convolutional layers was ReLU, and the output layer used a sigmoid activation function for binary classification. The model was trained using the Adam optimizer with a learning rate of 0.001 and binary cross-entropy loss.
+A stratified 5-fold cross-validation was performed to evaluate the performance of the two-layer ShallowCNN. Early stopping was implemented based on validation loss to prevent overfitting.
+
+\subsubsection{Three-Layer ShallowCNN with Dropout}
+
+The three-layer ShallowCNN architecture was designed to be slightly deeper than the two-layer version, with an additional convolutional layer and dropout for regularization. The architecture is as follows:
+
+\begin{table}[!htbp]
+    \centering
+    \begin{tabular}{lcc}
+        \toprule
+        Layer & Output shape & Parameters \\
+        \midrule
+        conv2d (Conv2D) & (None, 224, 224, 16) & 160 \\
+        max\_pooling2d (MaxPooling2D) & (None, 112, 112, 16) & 0 \\
+        conv2d (Conv2D) & (None, 112, 112, 32) & 4,640 \\
+        max\_pooling2d (MaxPooling2D) & (None, 56, 56, 32) & 0 \\
+        conv2d (Conv2D) & (None, 56, 56, 64) & 18,496 \\
+        dropout\ (Dropout) & (None, 56, 56, 64) & 0 \\
+        flatten\ (Flatten) & (None, 200704) & 0 \\
+        dense\ (Dense) & (None, 128) & 25,690,240 \\
+        dropout\ (Dropout) & (None, 128) & 0 \\
+        dense\ (Dense) & (None, 1) & 129 \\
+        \bottomrule
+    \end{tabular}
+    \caption{Layer-wise architecture summary of the three-layer ShallowCNN model with dropout.}
+    \label{tab:threelayercnn}
+\end{table}
+
+\noindent
+Same activation functions, optimizer, and loss function were used as in the two-layer model. The three-layer ShallowCNN was trained using the same training and validation sets to ensure a fair comparison of performance between the two architectures.
+
+\subsection{BI-RADS Score Prediction}
+The certainty of how likely a lesion is malignant can help add priority to whether or not a
+scan should be reviewed immediately. In this section, the neural network was adjusted to give images
+a BI-RADS score to rank the probability of a malignant lesion and determine if they are
+malignant based off of this score. The BI-RADS score is a standardized system used by radiologists to categorize breast imaging findings based on their level of suspicion for malignancy. The categories range from 0 to 5, with higher scores indicating a greater likelihood of malignancy. For this task, the model was trained to predict the BI-RADS score for each abnormality, which can provide more nuanced information about the risk level of the lesion compared to a binary classification.
+
+\medskip \noindent
+BI-RADS scores are typically assigned with the following interpretations:
+\begin{itemize}
+    % make the list more compact in spacing
+    \setlength\itemsep{.01\smallskipamount}
+    \item BI-RADS 0: Incomplete - Additional imaging evaluation needed
+    \item BI-RADS 1: Negative - No findings of concern
+    \item BI-RADS 2: Benign - Benign with no suspicion of malignancy
+    \item BI-RADS 3: Probably Benign - Probably benign but short-term follow-up is recommended
+    \item BI-RADS 4: Suspicious - Suspicious for malignancy and biopsy should be considered
+    \item BI-RADS 5: Highly Suggestive of Malignancy
+    \item BI-RADS 6: Known Biopsy-Proven Malignancy 
+\end{itemize}
+
+
+\medskip \noindent
+The distribution of BI-RADS scores in the dataset is shown in Figure \ref{fig:dists} (c) with BI-RADS 6 excluded as it is not applicable for mammography prediction and it requires prior biopsy results. Given that the dataset only contains three samples with BI-RADS score of 1, the models were trained on a dataset where BI-RADS scores of 0 and 1 were grouped together.
+
+\subsubsection{CNN with Categorical Crossentropy}
+For the BI-RADS score prediction task, a CNN architecture similar to the three-layer ShallowCNN was used, but with modifications to accommodate the multi-class classification problem. The output layer was changed to have 5 neurons corresponding to the BI-RADS categories (0/1, 2, 3, 4, 5), and a softmax activation function was applied to produce probability distributions over the classes. 
+
+\medskip \noindent
+The model was trained using categorical cross-entropy loss and evaluated using the same metrics of accuracy, precision, recall, and F1-score for each BI-RADS category. However, the metrics were calculated using a macro-average approach to account for class imbalance in the dataset, especially given the low number of samples in certain BI-RADS categories.
+
+
+\subsubsection{Regressor with Mean Squared Error Loss}
+Given that the BI-RADS score is an ordinal variable, another approach was to treat the prediction task as a regression problem. In this case, the output layer of the CNN was modified to have a single neuron with a linear activation function, and the model was trained using mean squared error (MSE) loss. The predicted BI-RADS score was then rounded to the nearest integer to assign a category. This approach allows the model to capture the ordinal nature of the BI-RADS scores, potentially improving performance by leveraging the inherent ordering of the categories.
+
+\begin{table}[!htbp]
+    \centering
+    \begin{tabular}{lcc}
+        \toprule
+        Layer & Output shape & Parameters \\
+        \midrule
+        conv2d (Conv2D) & (None, 224, 224, 16) & 160 \\
+        max\_pooling2d (MaxPooling2D) & (None, 112, 112, 16) & 0 \\
+        conv2d (Conv2D) & (None, 112, 112, 32) & 4,640 \\
+        max\_pooling2d\_15 (MaxPooling2D) & (None, 56, 56, 32) & 0 \\
+        conv2d (Conv2D) & (None, 56, 56, 32) & 9,248 \\
+        max\_pooling2d (MaxPooling2D) & (None, 28, 28, 32) & 0 \\
+        flatten (Flatten) & (None, 25088) & 0 \\
+        dense (Dense) & (None, 64) & 1,605,696 \\
+        dropout (Dropout) & (None, 64) & 0 \\
+        dense (Dense) & (None, 1) & 65 \\
+        birad\_score (Lambda) & (None, 1) & 0 \\
+        \bottomrule
+    \end{tabular}
+    \caption{Layer-wise architecture summary of the BI-RADS regressor model.}
+    \label{tab:biradsregressor}
+\end{table}
+
+
+\section{Results}
+In this section, we present the results of the pathological classification and BI-RADS score prediction tasks. The performance of the two-layer and three-layer ShallowCNN models for pathological classification is compared, and the results of both the categorical cross-entropy and regression approaches for BI-RADS score prediction are discussed.
+
+\subsection{Pathology Classification}
+The results of a 5-fold cross-validation for the two-layer ShallowCNN showed best performance at a 80\%-10\%-10\% train-validation-test split as in Figure \ref{fig:crossval}. The model was then trained on the full training set and evaluated on the test set, yielding an average validation accuracy of 0.77, precision of 0.82, recall of 0.81, and an F1-score of 0.71 for the malignant class as shown in Figure \ref{fig:valloss1}. The three-layer ShallowCNN with dropout showed similar performance, with a slightly higher recall but lower precision compared to the two-layer model as shown in Figure \ref{fig:valloss1}.
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=.6\textwidth]{../figs/shallow/shallow_val_metrics.png}
+    \caption*{5-fold Cross-validation of Two-layer ShallowCNN performance metrics}
+    \caption{Performance metrics for pathological classification using two-layer and three-layer ShallowCNN models.}
+    \label{fig:crossval}
+\end{figure}
+
+\begin{figure}[!htbp]
+    \centering
+    \begin{minipage}[t]{0.85\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../figs/shallow/valloss.png}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.6\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../figs/shallow/mets.png}
+    \end{minipage}
+    \caption{Performance metrics for pathological classification using two-layer ShallowCNN models.}
+    \label{fig:valloss1}
+\end{figure}
+
+\noindent
+In Figure \ref{fig:valloss1}, the training loss decreased steadily over epochs, while the validation loss increased after 10 epochs which is indicative of overfitting.
+
+\noindent
+Next, the three-layer ShallowCNN with dropout showed similar performance, with a slightly higher average validation recall of 0.83 but lower precision of 0.78 compared to the two-layer model. The F1-score for the malignant class was 0.70, which is slightly lower than the two-layer model, indicating a trade-off between precision and recall in the deeper architecture. The training and validation loss curves for the three-layer model are shown in Figure \ref{fig:valloss2}. While the training loss decreased steadily, the validation loss still showed more fluctuation and increased after 10 epochs, suggesting potential overfitting despite the use of dropout. This highlights the importance of careful regularization and early stopping when training deeper models on this dataset.
+
+
+\begin{figure}[!htbp]
+    \centering
+    \begin{minipage}[t]{0.85\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../figs/shallow/valloss.png}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.6\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../figs/shallow/mets.png}
+    \end{minipage}
+    \caption{Performance metrics for pathological classification using two-layer ShallowCNN models.}
+    \label{fig:valloss2}
+\end{figure}
+
+
+\noindent
+The trained model was then evaluated on the test set, yielding an accuracy of 0.78, precision of 0.80, recall of 0.79, and an F1-score of 0.75 for the malignant class. The three-layer ShallowCNN with dropout showed similar performance, with a slightly higher recall and F1 Scores but lower precision compared to the two-layer model. The resulting confusion matrices for both models are shown in Figure \ref{fig:conf}, illustrating the distribution of true positives, false positives, true negatives, and false negatives for each model. The two-layer ShallowCNN had a higher number of false positives compared to the three-layer model, which may explain the higher precision observed in the two-layer architecture. However, the three-layer model's higher recall suggests it was better at identifying malignant cases, albeit at the cost of more false positives. These results highlight the trade-offs between precision and recall when choosing model architectures for this classification task.
+
+\begin{figure}[!htbp]
+    \centering
+    \begin{minipage}[t]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../figs/shallow/conf.png}
+        \caption*{(a) Two-layer ShallowCNN}
+    \end{minipage}
+    \begin{minipage}[t]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../figs/shallow/conf2.png}
+        \caption*{(b) Three-layer ShallowCNN with dropout}
+    \end{minipage}
+    \caption{Confusion matrices for pathological classification}
+    \label{fig:conf}
+\end{figure}
+
+\subsection{BI-RADS Score Prediction}
+
+As discussed in the methods section, two approaches were taken for BI-RADS score prediction: a categorical cross-entropy model and a regression model with mean squared error loss. Both models were trained on the same dataset but with different labels, and evaluation results were not as strong as the pathological classification task, likely due to the increased complexity of predicting multiple classes and the ordinal nature of the BI-RADS scores. 
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=.8\textwidth]{../figs/birads/valloss.png}
+    \vspace{-.5em}
+    \caption*{(a) Model with Categorical Cross-Entropy Loss}
+    \medskip
+    \includegraphics[width=.8\textwidth]{../figs/birads/valloss2.png}
+    \vspace{-.5em}
+    \caption*{(b) Regression Model with MSE Loss}
+    \caption{Training and validation loss and MSE for BI-RADS score prediction models.}
+    \label{fig:biradsresults}
+\end{figure}
+
+\noindent
+The models were evaluated using weighted accuracy, precision, recall, and F1-score. These metrics were calculated using a macro-average approach to account for class imbalance in the dataset, especially given the low number of samples in certain BI-RADS categories. 
+
+\begin{figure}[!htbp]
+    \centering
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../figs/birads/conf1.png}
+        \caption*{(a) Categorical Cross-Entropy Model}
+    \end{minipage}
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../figs/birads/conf2.png}
+        \caption*{(b) Regression Model with MSE Loss}
+    \end{minipage}
+    \caption{Confusion matrices for BI-RADS score prediction models.}
+    \label{fig:biradsconf}
+\end{figure}
+
+\noindent
+The categorical cross-entropy model achieved an overall accuracy of 0.317, with the weighted precision and recall very low at 0.413 and 0.317 respectively, shown in Figure \ref{fig:biradsconf} (a). This indicates that the model struggled to correctly classify samples into the correct BI-RADS categories, with many misclassifications occurring all across the cattegories as shown in the confusion matrix. The model's performance was particularly poor for the BI-RADS 4 category.
+
+\medskip \noindent
+The regression model with MSE loss performed slightly better, achieving an overall accuracy of 0.322, with a weighted precision of 0.482 and recall of 0.322. The confusion matrix for the regression model also showed fewer misclassifications between adjacent categories compared to the categorical model, suggesting that treating the BI-RADS score as an ordinal variable may have helped the model capture the underlying structure of the data better than the categorical approach.
+
+
+
 
 
 
 \section{Discussion}
 
+\subsection{Pathology Classification}
+The results of the pathological classification task indicate that both the two-layer and three-layer ShallowCNN models were able to achieve reasonable performance in distinguishing between malignant and benign abnormalities in the CBIS-DDSM dataset. The three layer ShallowCNN with dropout showed a slightly higher accuracy and recall compared to the two-layer model, suggesting that the deeper architecture may have been better at identifying malignant cases. However, this came at the cost of lower precision, indicating that the three-layer model also produced more false positives. 
 
-\section{Conclusion and Summary}
+\medskip \noindent
+Our three-layer ShallowCNN with dropout marginally outperformed the reference base models in work by Das et al. \cite{ref:example2} with an accuracy of 0.82 compared to their reported accuracy of 0.78 for a model with two convolutional layers and no dropout. This improvement may be attributed to the additional convolutional layer and the use of dropout for regularization, which can help prevent overfitting and improve generalization to unseen data. However, the performance of both models is still limited by the relatively simple architecture and the complexity of the task, suggesting that more sophisticated models may be needed to achieve higher accuracy in pathological classification of mammography images.
 
-\section{Results}
+\medskip \noindent
+The confusion matrices for both models revealed that the majority of misclassifications were false positives, particularly for the two-layer ShallowCNN. This suggests that while the models were able to identify many malignant cases, they also struggled to correctly classify benign cases, which could lead to unnecessary follow-up procedures in a clinical setting. The three-layer model with dropout showed a better balance between precision and recall, but further improvements may be needed to reduce false positives while maintaining high sensitivity for malignant cases.
 
+
+\subsection{BI-RADS Score Prediction}
+Our results showed that a simple CNN model struggled to accurately predict the BI-RADS scores, with the categorical model performing slightly worse than the regression model. The confusion matrices for both models revealed significant misclassifications across all BI-RADS categories, particularly for the BI-RADS 4 category, which is clinically important for identifying suspicious lesions that may require biopsy.
+
+\medskip \noindent
+The regression model showed fewer misclassifications between distant categories compared to the categorical model, suggesting that treating the BI-RADS score as an ordinal variable may have helped capture the underlying structure of the data better than the categorical approach. However, overall performance was still limited, indicating that further model development and potentially additional data may be needed to improve BI-RADS score prediction accuracy.
+
+\subsection{Limitations and Future Work}
+Several limitations of this study should be acknowledged. First, the two pathological classification models were relatively simple ShallowCNN architectures. While the three-layer model with dropout marginally outproformed the reference base models in work by Das et al. \cite{ref:example2}, literature shows that  more complex architectures such as ResNets \cite{ref:example2} or DenseNets \cite{ref:densenet} could potentially achieve better performance, albeit with increased computational requirements and risk of overfitting given the dataset size. Second, the BI-RADS score prediction task proved to be more challenging than binary classification, likely due to the increased complexity of predicting multiple classes and the ordinal nature of the BI-RADS scores. Future work could explore more sophisticated CNN models with regression approaches for BI-RADS prediction, such as ordinal regression models or multi-task learning frameworks that jointly predict pathology and BI-RADS scores. 
+
+\medskip \noindent
+Additionally, segmentation models such as the pre-trained YOLO models \cite{ref:yolo} that leverage the ROI masks provided in the dataset could be developed to focus on lesion-specific features, which can improve both pathological classification and BI-RADS score prediction. Due to time constraints, this was not explored in the current study, but it represents a promising avenue for future work on such a dataset which has segmentation masks available.
+
+
+\section{Conclusion}
+
+In this study, we developed and evaluated relatively simple neural-network pipelines to determine their capacity for both the binary pathological classification and BI-RADS-informed risk stratification of mammographic abnormalities using the CBIS-DDSM dataset. Our findings indicate that a three-layer ShallowCNN architecture can effectively learn to distinguish malignant from benign lesions, achieving a peak accuracy of 0.82 and marginally outperforming baseline shallow models. The extended task of directly predicting multi-class, ordinal BI-RADS scores proved markedly more difficult, emphasizing the inherent challenges of automated ordinal clinical scoring on non-uniform, imbalanced datasets. While our current models lay the fundamental framework for using machine-learning tools to streamline radiological triage queues, they also underscore the need for employing significantly more advanced architectures, such as pre-trained complex CNNs and segmentation models with much larger cohorts, to meet the rigor and precision required for clinical deployment.
 
 \clearpage
 % References section (thebibliography prints the "References" heading)
 \begin{thebibliography}{9}
 
+\bibitem{ref:example5}
+Canadian Cancer Statistics Advisory Committee (2023). \emph{Canadian Cancer Statistics 2023}. Canadian Cancer Society, Statistics Canada, and Public Health Agency of Canada. \url{https://cdn.cancer.ca/-/media/files/research/cancer-statistics/2023-statistics/2023_PDF_EN.pdf}
+
+\bibitem{ref:bleicher2016}
+Richard J. Bleicher, Karen Ruth, Elin R. Sigurdson, et al. (2016). \emph{Time to Surgery and Breast Cancer Survival in the United States}. JAMA Oncology, 2(3), 330--338. DOI: \url{https://doi.org/10.1001/jamaoncol.2015.4503}
+
+\bibitem{ref:example4}
+Radiopaedia (accessed 2026). \emph{Breast Imaging-Reporting and Data System (BI-RADS)}. \url{https://radiopaedia.org/articles/breast-imaging-reporting-and-data-system-BI-RADS-2}
+
 \bibitem{ref:example1}
-Choptuik, M. (2025). Physics 210: Intro Computational Physics: Course Notes and Resources [Website].
-Retrieved from \href{https://laplace.physics.ubc.ca/410/}{https://laplace.physics.ubc.ca/410/}
+Rebecca Sawyer Lee, Francisco Gimenez, Assaf Hoogi, and Daniel Rubin (2016). \emph{Curated Breast Imaging Subset of DDSM [Dataset]}. The Cancer Imaging Archive. DOI: \url{https://doi.org/10.7937/K9/TCIA.2016.7O02S9CY}
 
 \bibitem{ref:example2}
-Toomre, A., and Toomre, J. (1972). Galactic Bridges and Tails. The Astrophysical Journal, 178(3), 623666.
+Das H. S., Das A., Neog A., Mallik S., Bora K., and Zhao Z. (2023). \emph{Breast cancer detection: Shallow convolutional neural network against deep convolutional neural networks based approach}. Frontiers in Genetics, 13, 1097207. DOI: \url{https://doi.org/10.3389/fgene.2022.1097207}
+
+\bibitem{ref:example3}
+Olga Russakovsky, Jia Deng, Hao Su, Jonathan Krause, Sanjeev Satheesh, Sean Ma, Zhiheng Huang, Andrej Karpathy, Aditya Khosla, Michael Bernstein, Alexander C. Berg, and Li Fei-Fei (2015). \emph{ImageNet Large Scale Visual Recognition Challenge}. International Journal of Computer Vision, 115, 211--252. DOI: \url{https://doi.org/10.1007/s11263-015-0816-y}
+
+\bibitem{ref:densenet}
+Gao Huang, Zhuang Liu, Laurens van der Maaten, and Kilian Q. Weinberger (2017). \emph{Densely Connected Convolutional Networks}. Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR), 4700--4708. DOI: \url{https://doi.org/10.1109/CVPR.2017.243}
+
+\bibitem{ref:yolo}
+Joseph Redmon, Santosh Divvala, Ross Girshick, and Ali Farhadi (2016). \emph{You Only Look Once: Unified, Real-Time Object Detection}. Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR), 779--788. DOI: \url{https://doi.org/10.1109/CVPR.2016.91}
 
 \end{thebibliography}
+
+\newpage
+
+\appendix
+\section*{Appendix}
+\addcontentsline{toc}{section}{Appendix}
+
+
+\section{Source Code}
+Source code for the data preprocessing pipeline, model architectures, training loops, and evaluation metrics is available in the GitHub repository associated with this project: \url{https://github.com/mmshakourig/mammolesionoscopy}. The repository includes Jupyter notebooks for data exploration, model training, and result visualization, as well as helper files with functions for data loading, augmentation, and metric calculation. The code is organized into separate modules for clarity and reproducibility, and comments are provided in the notebooks and helper files.
+
 
 \end{document}
